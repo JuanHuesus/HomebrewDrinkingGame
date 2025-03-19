@@ -15,8 +15,23 @@ class Deck:
 
     def draw_cards(self, num):
         if len(self.cards) >= num:
-            return random.sample(self.cards, num)
+            drawn_cards = random.sample(self.cards, num)
+            return self.handle_special_cards(drawn_cards)
         return []
+
+    def handle_special_cards(self, drawn_cards):
+        """Handles special cards that change behavior or trigger actions."""
+        transformed_cards = []
+        for card in drawn_cards:
+            if card == "Surprise Card":
+                # Example of a special card that transforms into another card
+                transformed_cards.append("Drink 5")  # Turns into a "Drink 5" card
+            elif card == "Crowd Challenge":
+                # Example of a card that triggers an action
+                transformed_cards.append("Crowd Challenge")  # Keeps the card, but it will trigger an action
+            else:
+                transformed_cards.append(card)
+        return transformed_cards
 
 class GameApp(tk.Tk):
     def __init__(self):
@@ -28,8 +43,8 @@ class GameApp(tk.Tk):
         self.current_player_index = 0
         self.deck = Deck()
 
-        # Sample cards for demonstration
-        sample_cards = ["Card A", "Card B", "Card C", "Card D", "Card E"]
+        # Sample cards for demonstration, including a "Surprise Card"
+        sample_cards = ["Drink 2", "Drink 1, Give 1", "Drink 2", "Give 3", "Crowd Challenge", "Drink 1", "Give 1", "Surprise Card"]
         for card in sample_cards:
             self.deck.add_card(card)
 
@@ -79,16 +94,19 @@ class PlayerSetupFrame(tk.Frame):
         super().__init__(parent)
         self.controller = controller
 
-        self.label = tk.Label(self, text="Enter Player Name:")
+        self.center_frame = tk.Frame(self)
+        self.center_frame.pack(expand=True)
+
+        self.label = tk.Label(self.center_frame, text="Enter Player Name:")
         self.label.pack(pady=10)
 
-        self.player_entry = tk.Entry(self)
+        self.player_entry = tk.Entry(self.center_frame)
         self.player_entry.pack(pady=5)
 
-        self.add_button = tk.Button(self, text="Add Player", command=self.add_player)
+        self.add_button = tk.Button(self.center_frame, text="Add Player", command=self.add_player)
         self.add_button.pack(pady=5)
 
-        self.start_button = tk.Button(self, text="Start Game", command=self.start_game)
+        self.start_button = tk.Button(self.center_frame, text="Start Game", command=self.start_game)
         self.start_button.pack(pady=20)
 
     def add_player(self):
@@ -107,16 +125,19 @@ class GameFrame(tk.Frame):
         super().__init__(parent)
         self.controller = controller
 
-        self.label = tk.Label(self, text="Game Started!")
+        self.center_frame = tk.Frame(self)
+        self.center_frame.pack(expand=True)
+
+        self.label = tk.Label(self.center_frame, text="Game Started!")
         self.label.pack(pady=20)
 
         self.card_buttons = []
         for _ in range(3):
-            btn = tk.Button(self, text="", command=lambda b=_: self.select_card(b))
+            btn = tk.Button(self.center_frame, text="", command=lambda b=_: self.select_card(b))
             btn.pack(pady=5)
             self.card_buttons.append(btn)
 
-        self.turn_label = tk.Label(self, text="")
+        self.turn_label = tk.Label(self.center_frame, text="")
         self.turn_label.pack(pady=10)
 
     def update_for_new_turn(self):
@@ -129,9 +150,16 @@ class GameFrame(tk.Frame):
     def select_card(self, button_index):
         selected_card = self.card_buttons[button_index].cget("text")
         print(f"{self.controller.players[self.controller.current_player_index]} selected {selected_card}")
+        if selected_card == "Crowd Challenge":
+            self.handle_crowd_challenge()
         for btn in self.card_buttons:
             btn.config(state=tk.DISABLED)
         self.controller.next_player()
+
+    def handle_crowd_challenge(self):
+        # Implement behavior for crowd challenge, such as showing a pop-up or prompting all players.
+        print("Crowd Challenge triggered! All players must do something special!")
+        # Here you could add logic to pop up a challenge for all players.
 
 if __name__ == "__main__":
     app = GameApp()
