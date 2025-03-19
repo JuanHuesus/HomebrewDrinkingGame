@@ -132,8 +132,8 @@ class GameFrame(tk.Frame):
         self.label.pack(pady=20)
 
         self.card_buttons = []
-        for _ in range(3):
-            btn = tk.Button(self.center_frame, text="", command=lambda b=_: self.select_card(b))
+        for i in range(3):
+            btn = tk.Button(self.center_frame, text="", command=lambda b=i: self.select_card(b))
             btn.pack(pady=5)
             self.card_buttons.append(btn)
 
