@@ -2,7 +2,14 @@ import random
 
 class NormalDeck:
     def __init__(self):
-        self.cards = []
+        self.cards = [
+            "Drink 1",
+            "Drink 2",
+            "Give 1",
+            "Give 3",
+            "Crowd Challenge",
+            "Surprise Card"
+        ]
     
     def add_card(self, card_name):
         if card_name and card_name not in self.cards:
@@ -19,11 +26,11 @@ class NormalDeck:
         return []
     
     def handle_special_cards(self, drawn_cards):
-        """Käsittelee erikoiskortit, jotka muuttavat käyttäytymistä tai laukaisevat toimintoja."""
+        """Muutetaan erikoiskortit halutuksi."""
         transformed_cards = []
         for card in drawn_cards:
             if card == "Surprise Card":
-                transformed_cards.append("Drink 5")  # Muutetaan "Surprise Card" -> "Drink 5"
+                transformed_cards.append("Drink 5")
             elif card == "Crowd Challenge":
                 transformed_cards.append("Crowd Challenge")
             else:

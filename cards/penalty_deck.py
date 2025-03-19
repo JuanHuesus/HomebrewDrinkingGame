@@ -2,7 +2,11 @@ import random
 
 class PenaltyDeck:
     def __init__(self):
-        self.cards = []
+        self.cards = [
+            "Penalty Drink 1",
+            "Penalty Drink 2",
+            "Penalty Drink 3"
+        ]
     
     def add_penalty_card(self, card_name):
         if card_name and card_name not in self.cards:
@@ -13,7 +17,7 @@ class PenaltyDeck:
             self.cards.remove(card_name)
     
     def draw_penalty_card(self):
-        """Arpoo yhden rangaistuskortin, mikäli pakassa on kortteja."""
+        """Arpoo yhden rangaistuskortin, jos niitä on saatavilla."""
         if self.cards:
             return random.choice(self.cards)
         return None
