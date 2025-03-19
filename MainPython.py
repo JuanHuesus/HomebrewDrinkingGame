@@ -46,7 +46,10 @@ class GameApp(tk.Tk):
         # Näkymien container
         self.container = ttk.Frame(self, padding=10)
         self.container.place(x=0, y=50, relwidth=0.75, relheight=0.85)
-        
+
+        self.container.rowconfigure(0, weight=1)
+        self.container.columnconfigure(0, weight=1)
+
         self.frames = {}
         for F in (PlayerSetupFrame, GameFrame):
             page_name = F.__name__
