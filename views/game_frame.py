@@ -92,7 +92,7 @@ class GameFrame(ttk.Frame):
                 w.bind("<Button-1>", lambda e, idx=n: self.select_card(idx))
             return
         s = self.card_widgets[i].text
-        print(f"{self.controller.players[self.controller.current_player_index]} selected {s}")
+        self.controller.log_message(f"{self.controller.players[self.controller.current_player_index]} selected {s}")
         self.penalty_label.config(text="")
         if s == "Crowd Challenge":
             self.handle_crowd_challenge()
@@ -100,11 +100,11 @@ class GameFrame(ttk.Frame):
 
     def redraw_penalty(self):
         if self.redraw_used:
-            print("Redraw is already used this turn.")
+            self.controller.log_message("Redraw is already used this turn.")
             return
         p = self.controller.penalty_deck.draw_penalty_card()
         if p:
-            print(f"{self.controller.players[self.controller.current_player_index]} drew penalty card: {p}")
+            self.controller.log_message(f"{self.controller.players[self.controller.current_player_index]} drew penalty card: {p}")
             self.penalty_label.config(text=p)
         else:
             self.penalty_label.config(text="")
@@ -121,4 +121,4 @@ class GameFrame(ttk.Frame):
         self.redraw_used = True
 
     def handle_crowd_challenge(self):
-        print("Crowd Challenge triggered! All players must do something special!")
+        self.controller.log_message("Crowd Challenge triggered! All players must do something special!")
