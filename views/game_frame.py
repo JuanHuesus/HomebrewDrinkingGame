@@ -8,7 +8,7 @@ class CardWidget(tk.Canvas):
         self.command = command
         self.text = text
         self.text_item = None
-        self.border_color = "black"  
+        self.border_color = "black"  # Oletusreunan väri
         self.draw_card()
         self.bind("<Configure>", self.on_resize)
         self.bind("<Button-1>", self.on_click)
@@ -22,8 +22,9 @@ class CardWidget(tk.Canvas):
         m = int(min(w, h) * 0.05)
         fs = max(10, int(h / 10))
         self.create_rectangle(m, m, w - m, h - m, fill="white", outline=self.border_color, width=3)
-        self.text_item = self.create_text(w/2, h/2, text=self.text, font=("Helvetica", fs, "bold"),
-                                          fill="black", width=w - m*2)
+        self.text_item = self.create_text(w/2, h/2, text=self.text,
+                                          font=("Helvetica", fs, "bold"), fill="black",
+                                          width=w - m*2)
 
     def update_text(self, text):
         self.text = text
@@ -40,11 +41,13 @@ class CardWidget(tk.Canvas):
         if self.command:
             self.command()
 
-
 class GameFrame(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+
+        # Määritellään item-korttien nimet
+        self.ITEM_CARDS = {"Shield", "Reveal Free", "Extra Life"}
 
         self.center_frame = ttk.Frame(self)
         self.center_frame.pack(expand=True, fill="both")
@@ -73,10 +76,14 @@ class GameFrame(ttk.Frame):
 
         self.redraw_used = False
 
+        # Tallennetaan tämän vuoron oikeat korttiarvot
         self.current_cards = []
+        # Yhden vuoron aikana yksi kortti asetetaan piilotetuksi ("???")
         self.hidden_index = None
+        # Lista, joka kertoo, onko kukin kortti alun perin paljastettu
         self.revealed = []
-        self.ditto_active = []
+        # Seurataan, onko korttiin aktivoitu Ditto–efekti (vaatii vahvistusklikkauksen)
+        self.ditto_active = [False, False, False]
 
     def update_for_new_turn(self):
         self.redraw_used = False
@@ -85,7 +92,14 @@ class GameFrame(ttk.Frame):
         current_player = self.controller.players[self.controller.current_player_index]
         self.turn_label.config(text=f"{current_player}'s Turn")
 
+        # Vedä 3 uutta korttia NormalDeckistä
         self.current_cards = self.controller.normal_deck.draw_cards(3)
+        # Satunnaisesti muutetaan joihinkin kortteihin item–kortteja (30 % todennäköisyys per kortti)
+        for i in range(len(self.current_cards)):
+            if random.random() < 0.3:
+                self.current_cards[i] = random.choice(list(self.ITEM_CARDS))
+
+        # Valitaan satunnaisesti yksi kortti, joka asetetaan piilotetuksi ("???")
         self.hidden_index = random.randint(0, 2)
         self.revealed = [True, True, True]
         self.revealed[self.hidden_index] = False
@@ -100,32 +114,49 @@ class GameFrame(ttk.Frame):
             widget.bind("<Button-1>", lambda e, idx=i: self.select_card(idx))
 
     def select_card(self, i):
-        if self.ditto_active[i]:
-            self.controller.log_message(f"{self.controller.players[self.controller.current_player_index]} confirmed Ditto card selection.")
-            self.card_widgets[i].unbind("<Button-1>")
-            self.controller.next_player()
-            return
-
+        # Poistetaan hetkellisesti kaikkien korttien klikkaustapahtumat
         for widget in self.card_widgets:
             widget.unbind("<Button-1>")
 
+        # Jos kortti on piilotettu ("???"), paljasta se heti ja odota seuraavaa klikkausta
         if not self.revealed[i]:
             self.revealed[i] = True
-            actual_value = self.current_cards[i]
-            self.card_widgets[i].update_text(actual_value)
-        else:
-            actual_value = self.current_cards[i]
-
-        if random.random() < 0.25:
-            self.ditto_active[i] = True
-            self.card_widgets[i].update_text("Ditto")
-            self.card_widgets[i].update_border_color("purple")
-            self.controller.log_message("Ditto effect activated! Click the card again to confirm.")
+            self.card_widgets[i].update_text(self.current_cards[i])
             self.card_widgets[i].bind("<Button-1>", lambda e, idx=i: self.select_card(idx))
             return
-        else:
-            self.controller.log_message(f"{self.controller.players[self.controller.current_player_index]} selected {actual_value}")
+
+        # Kortti on nyt paljastettu
+        revealed_value = self.card_widgets[i].text
+        current_player = self.controller.players[self.controller.current_player_index]
+
+        # Jos paljastunut kortti on item–kortti, siirretään se pelaajan inventaarioon
+        if revealed_value in self.ITEM_CARDS:
+            self.controller.log_message(f"{current_player} acquired item: {revealed_value}")
+            self.controller.add_item_to_player(current_player, revealed_value)
+            self.card_widgets[i].unbind("<Button-1>")
+            self.card_widgets[i].update_text("")
+            # Peli etenee heti
             self.controller.next_player()
+            return
+
+        # Sovelletaan 25 %:n todennäköisyys Ditto–efektille
+        if random.random() < 0.25:
+            if self.ditto_active[i]:
+                self.controller.log_message(f"{current_player} confirmed Ditto card.")
+                self.card_widgets[i].unbind("<Button-1>")
+                self.controller.next_player()
+                return
+            else:
+                self.ditto_active[i] = True
+                self.card_widgets[i].update_text("Ditto")
+                self.card_widgets[i].update_border_color("purple")
+                self.controller.log_message("Ditto effect activated! Click again to confirm.")
+                self.card_widgets[i].bind("<Button-1>", lambda e, idx=i: self.select_card(idx))
+                return
+
+        # Normaali kortin valinta ilman erikoisefektejä
+        self.controller.log_message(f"{current_player} selected {revealed_value}")
+        self.controller.next_player()
 
     def redraw_penalty(self):
         if self.redraw_used:
@@ -140,6 +171,9 @@ class GameFrame(ttk.Frame):
             self.penalty_label.config(text="")
 
         self.current_cards = self.controller.normal_deck.draw_cards(3)
+        for i in range(len(self.current_cards)):
+            if random.random() < 0.3:
+                self.current_cards[i] = random.choice(list(self.ITEM_CARDS))
         self.hidden_index = random.randint(0, 2)
         self.revealed = [True, True, True]
         self.revealed[self.hidden_index] = False
