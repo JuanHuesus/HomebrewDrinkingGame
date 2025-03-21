@@ -24,16 +24,15 @@ class GameApp(tk.Tk):
         except Exception as e:
             print("Background image not found:", e)
         
-        # ttk-tyylit
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
         self.style.configure("TFrame", background="#f0f0f0")
         self.style.configure("TButton", font=("Helvetica", 12))
         self.style.configure("TLabel", font=("Helvetica", 14), background="#f0f0f0")
         
-        self.players = []                 
+        self.players = []  
         self.current_player_index = 0
-        self.player_items = {}             
+        self.player_items = {}  
         
         self.normal_deck = NormalDeck()
         self.penalty_deck = PenaltyDeck()
@@ -49,23 +48,29 @@ class GameApp(tk.Tk):
             frame = F(parent=self.container, controller=self)
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
-        
         self.show_frame("PlayerSetupFrame")
         
         self.player_list_frame = ttk.Frame(self, padding=10, relief="ridge")
-        self.player_list_frame.place(relx=0.75, rely=0.1, relwidth=0.25, relheight=0.3)
-        self.player_list_label = ttk.Label(self.player_list_frame, text="Players", font=("Helvetica", 16))
-        self.player_list_label.pack(pady=10)
-        self.player_listbox = tk.Listbox(self.player_list_frame, font=("Helvetica", 12))
-        self.player_listbox.pack(fill="both", padx=10, pady=10, expand=True)
-        self.player_listbox.bind("<Double-Button-1>", self.on_player_list_double_click)
+        self.player_list_frame.place(relx=0.75, rely=0.1, relwidth=0.25, relheight=0.4)
+        self.player_list_label = ttk.Label(self.player_list_frame, text="Players & Inventory", font=("Helvetica", 16))
+        self.player_list_label.pack(pady=5)
+        
+        self.player_tree = ttk.Treeview(self.player_list_frame)
+        self.player_tree["columns"] = ("Inventory",)
+        self.player_tree.column("#0", width=120, minwidth=120)
+        self.player_tree.column("Inventory", width=150, minwidth=150)
+        self.player_tree.heading("#0", text="Player", anchor=tk.W)
+        self.player_tree.heading("Inventory", text="Inventory", anchor=tk.W)
+        self.player_tree.pack(fill="both", expand=True)
+        
+        self.player_tree.bind("<Double-1>", self.on_tree_item_double_click)
         
         self.message_box_frame = ttk.Frame(self, padding=10, relief="ridge")
-        self.message_box_frame.place(relx=0.75, rely=0.45, relwidth=0.25, relheight=0.4)
+        self.message_box_frame.place(relx=0.75, rely=0.55, relwidth=0.25, relheight=0.3)
         self.message_box_label = ttk.Label(self.message_box_frame, text="Card History", font=("Helvetica", 16))
         self.message_box_label.pack(pady=10)
         self.message_box = tk.Text(self, height=10, state='disabled', wrap='word', font=("Helvetica", 12))
-        self.message_box.place(relx=0.75, rely=0.5, relwidth=0.25, relheight=0.4)
+        self.message_box.place(relx=0.75, rely=0.60, relwidth=0.25, relheight=0.3)
         
         self.exit_button = ttk.Button(self, text="Exit", command=self.exit_game)
         self.exit_button.place(relx=0.95, rely=0.95, anchor="se")
@@ -78,51 +83,53 @@ class GameApp(tk.Tk):
         if player_name and player_name not in self.players:
             self.players.append(player_name)
             self.player_items[player_name] = []  
-            self.update_player_listbox()
+            self.update_player_tree()
     
     def add_item_to_player(self, player, item):
         if player not in self.player_items:
             self.player_items[player] = []
         self.player_items[player].append(item)
         self.log_message(f"Added item '{item}' to {player}.")
-        self.update_player_listbox()
+        self.update_player_tree()
     
-    def update_player_listbox(self):
-        self.player_listbox.delete(0, tk.END)
+    def update_player_tree(self):
+        for item in self.player_tree.get_children():
+            self.player_tree.delete(item)
         for player in self.players:
-            counter = collections.Counter(self.player_items.get(player, []))
-            items_str = ""
-            if counter:
-                items_list = [f"{item} x{count}" for item, count in counter.items()]
-                items_str = " (" + ", ".join(items_list) + ")"
-            display = f"{player}{items_str}"
-            self.player_listbox.insert(tk.END, display)
+            inv = collections.Counter(self.player_items.get(player, []))
+            inv_str = ", ".join([f"{k} x{v}" for k, v in inv.items()]) if inv else ""
+            if len(inv_str) > 40:
+                inv_str = inv_str[:40] + "..."
+            display = f"{player}{inv_str and ' (' + inv_str + ')'}"
+            self.player_tree.insert("", "end", iid=player, text=player, values=(inv_str,))
+
     
-    def on_player_list_double_click(self, event):
-        selection = self.player_listbox.curselection()
-        if not selection:
-            return
-        index = selection[0]
-        if index != self.current_player_index:
+    def on_tree_item_double_click(self, event):
+        item_id = self.player_tree.focus()
+        if item_id != self.players[self.current_player_index]:
             self.log_message("Only the active player can use items.")
             return
         current_player = self.players[self.current_player_index]
-        items = self.player_items.get(current_player, [])
-        if not items:
+        inv = collections.Counter(self.player_items.get(current_player, []))
+        if not inv:
             messagebox.showinfo("No items", "You have no items to use.")
             return
-        self.open_use_item_dialog(current_player)
-    
-    def open_use_item_dialog(self, player):
-        counter = collections.Counter(self.player_items.get(player, []))
+        self.open_use_item_dialog(current_player, inv)
+
+    def open_use_item_dialog(self, player, inv_counter):
         dialog = tk.Toplevel(self)
+        dialog.transient(self) 
+        x = self.winfo_rootx() + 50
+        y = self.winfo_rooty() + 50
+        dialog.geometry("+%d+%d" % (x, y))
         dialog.title("Use an Item")
         tk.Label(dialog, text="Select an item to use:", font=("Helvetica", 12)).pack(pady=10)
-        for item, count in counter.items():
+        for item, count in inv_counter.items():
             btn = ttk.Button(dialog, text=f"{item} x{count}",
                              command=lambda it=item, dlg=dialog: self.use_item_and_close(it, dlg))
             btn.pack(pady=5, padx=10, fill="x")
         ttk.Button(dialog, text="Cancel", command=dialog.destroy).pack(pady=10)
+
     
     def use_item_and_close(self, item, dialog):
         self.use_item(item)
@@ -133,16 +140,16 @@ class GameApp(tk.Tk):
         if current_player in self.player_items and item in self.player_items[current_player]:
             self.player_items[current_player].remove(item)
             self.log_message(f"{current_player} used {item}.")
-            self.update_player_listbox()
+            self.update_player_tree()
         else:
             self.log_message(f"{current_player} does not have {item}.")
     
     def next_player(self):
-        if len(self.players) == 0:
+        if not self.players:
             return
         self.current_player_index = (self.current_player_index + 1) % len(self.players)
         self.frames["GameFrame"].update_for_new_turn()
-        self.update_player_listbox()
+        self.update_player_tree()
     
     def log_message(self, message):
         self.message_box.config(state='normal')
