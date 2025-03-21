@@ -9,6 +9,7 @@ class CardWidget(tk.Canvas):
         self.text = text
         self.text_item = None
         self.border_color = "black"  # Oletusreunan väri
+        self.bg_color = "white"      # Oletustaustaväri
         self.draw_card()
         self.bind("<Configure>", self.on_resize)
         self.bind("<Button-1>", self.on_click)
@@ -21,7 +22,7 @@ class CardWidget(tk.Canvas):
             return
         m = int(min(w, h) * 0.05)
         fs = max(10, int(h / 10))
-        self.create_rectangle(m, m, w - m, h - m, fill="white", outline=self.border_color, width=3)
+        self.create_rectangle(m, m, w - m, h - m, fill=self.bg_color, outline=self.border_color, width=3)
         self.text_item = self.create_text(w/2, h/2, text=self.text,
                                           font=("Helvetica", fs, "bold"), fill="black",
                                           width=w - m*2)
@@ -32,6 +33,10 @@ class CardWidget(tk.Canvas):
 
     def update_border_color(self, color):
         self.border_color = color
+        self.draw_card()
+        
+    def update_fill_color(self, color):
+        self.bg_color = color
         self.draw_card()
 
     def on_resize(self, event):
@@ -46,13 +51,13 @@ class GameFrame(ttk.Frame):
         super().__init__(parent)
         self.controller = controller
 
-        # Määritellään item-korttien nimet
+        # Määritellään item–korttien nimet
         self.ITEM_CARDS = {"Shield", "Reveal Free", "Extra Life", "test1", "test2"}
 
         self.center_frame = ttk.Frame(self)
         self.center_frame.pack(expand=True, fill="both")
 
-        self.turn_label = ttk.Label(self.center_frame, text="", font=("Helvetica", 16))
+        self.turn_label = ttk.Label(self.center_frame, text="", font=self.controller.label_font)
         self.turn_label.pack(pady=10)
 
         self.card_frame = ttk.Frame(self.center_frame)
@@ -67,11 +72,13 @@ class GameFrame(ttk.Frame):
             self.card_frame.columnconfigure(i, weight=1)
         self.card_frame.rowconfigure(0, weight=1)
 
-        self.redraw_button = ttk.Button(self.center_frame, text="Redraw (Penalty)", command=self.redraw_penalty)
+        self.redraw_button = ttk.Button(self.center_frame, text="Redraw (Penalty)", command=self.redraw_penalty,
+                                        style="Accent.TButton")
         self.redraw_button.pack(pady=10)
 
-        self.penalty_label = ttk.Label(self.center_frame, text="", font=("Helvetica", 14),
-                                       background="#f0f0f0", foreground="red")
+        # Tehdään penalty-teksti isommaksi ja selkeämmäksi
+        self.penalty_label = ttk.Label(self.center_frame, text="", font=self.controller.label_font,
+                                       background="#FFFACD", foreground="red")
         self.penalty_label.place(relx=0.5, rely=0.1, anchor="center")
 
         self.redraw_used = False
@@ -94,7 +101,7 @@ class GameFrame(ttk.Frame):
 
         # Vedä 3 uutta korttia NormalDeckistä
         self.current_cards = self.controller.normal_deck.draw_cards(3)
-        # Satunnaisesti muutetaan joihinkin kortteihin item–kortteja (30 % todennäköisyys per kortti)
+        # Muutetaan satunnaisesti joihinkin kortteihin item–kortteja (30 % todennäköisyys per kortti)
         for i in range(len(self.current_cards)):
             if random.random() < 0.3:
                 self.current_cards[i] = random.choice(list(self.ITEM_CARDS))
@@ -107,6 +114,7 @@ class GameFrame(ttk.Frame):
 
         for i, (widget, card_value) in enumerate(zip(self.card_widgets, self.current_cards)):
             widget.update_border_color("black")
+            widget.update_fill_color("white")
             if not self.revealed[i]:
                 widget.update_text("???")
             else:
@@ -144,12 +152,16 @@ class GameFrame(ttk.Frame):
             if self.ditto_active[i]:
                 self.controller.log_message(f"{current_player} confirmed Ditto card.")
                 self.card_widgets[i].unbind("<Button-1>")
+                # Palautetaan alkuperäinen ulkoasu vahvistuksen jälkeen
+                self.card_widgets[i].update_fill_color("white")
                 self.controller.next_player()
                 return
             else:
                 self.ditto_active[i] = True
+                # Päivitetään kortin ulkoasu, jotta Ditto näkyy selkeämmin
                 self.card_widgets[i].update_text("Ditto")
                 self.card_widgets[i].update_border_color("purple")
+                self.card_widgets[i].update_fill_color("#E6E6FA")  # Laventelinsävyinen tausta
                 self.controller.log_message("Ditto effect activated! Click again to confirm.")
                 self.card_widgets[i].bind("<Button-1>", lambda e, idx=i: self.select_card(idx))
                 return
@@ -181,6 +193,7 @@ class GameFrame(ttk.Frame):
 
         for i, (widget, card_value) in enumerate(zip(self.card_widgets, self.current_cards)):
             widget.update_border_color("black")
+            widget.update_fill_color("white")
             if not self.revealed[i]:
                 widget.update_text("???")
             else:

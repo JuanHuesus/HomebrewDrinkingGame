@@ -26,7 +26,6 @@ class NormalDeck:
         return []
     
     def handle_special_cards(self, drawn_cards):
-        """Muutetaan erikoiskortit halutuksi."""
         transformed_cards = []
         for card in drawn_cards:
             if card == "Surprise Card":

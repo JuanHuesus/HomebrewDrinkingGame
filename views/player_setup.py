@@ -9,16 +9,18 @@ class PlayerSetupFrame(ttk.Frame):
         self.center_frame = ttk.Frame(self)
         self.center_frame.pack(expand=True)
         
-        self.label = ttk.Label(self.center_frame, text="Enter Player Name:")
+        self.label = ttk.Label(self.center_frame, text="Enter Player Name:", font=self.controller.label_font)
         self.label.pack(pady=10)
         
-        self.player_entry = ttk.Entry(self.center_frame)
+        self.player_entry = ttk.Entry(self.center_frame, font=self.controller.entry_font)
         self.player_entry.pack(pady=5)
         
-        self.add_button = ttk.Button(self.center_frame, text="Add Player", command=self.add_player)
+        self.add_button = ttk.Button(self.center_frame, text="Add Player", command=self.add_player,
+                                     style="Accent.TButton")
         self.add_button.pack(pady=5)
         
-        self.start_button = ttk.Button(self.center_frame, text="Start Game", command=self.start_game)
+        self.start_button = ttk.Button(self.center_frame, text="Start Game", command=self.start_game,
+                                       style="Accent.TButton")
         self.start_button.pack(pady=20)
         
     def add_player(self):
