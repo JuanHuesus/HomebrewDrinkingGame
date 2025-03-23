@@ -3,9 +3,12 @@ import random
 class PenaltyDeck:
     def __init__(self):
         self.cards = [
-            "Penalty Drink 1",
-            "Penalty Drink 2",
-            "Penalty Drink 3"
+            "Drink 1",
+            "Drink 2",
+            "Drink 3",
+            "Drink 4",
+            "Shot",
+            "Shotgun"
         ]
     
     def add_penalty_card(self, card_name):

@@ -47,7 +47,7 @@ class GameFrame(ttk.Frame):
         self.controller = controller
 
         # Määritellään item-korttien nimet
-        self.ITEM_CARDS = {"Shield", "Reveal Free", "Extra Life", "test1", "test2"}
+        self.ITEM_CARDS = {"Shield", "Mirror"}
 
         self.center_frame = ttk.Frame(self)
         self.center_frame.pack(expand=True, fill="both")
