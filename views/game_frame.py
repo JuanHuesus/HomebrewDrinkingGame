@@ -72,9 +72,14 @@ class GameFrame(ttk.Frame):
             self.card_frame.columnconfigure(i, weight=1)
         self.card_frame.rowconfigure(0, weight=1)
 
+        # Nappi redrawille (penalty)
         self.redraw_button = ttk.Button(self.center_frame, text="Redraw (Penalty)", command=self.redraw_penalty,
                                         style="Accent.TButton")
         self.redraw_button.pack(pady=10)
+
+        # Uusi nappi penalty deckin rollaukselle
+        self.roll_button = ttk.Button(self.center_frame, text="Roll Penalty Deck", command=self.roll_penalty)
+        self.roll_button.pack(pady=10)
 
         # Tehdään penalty-teksti isommaksi ja selkeämmäksi
         self.penalty_label = ttk.Label(self.center_frame, text="", font=self.controller.label_font,
@@ -91,6 +96,14 @@ class GameFrame(ttk.Frame):
         self.revealed = []
         # Seurataan, onko korttiin aktivoitu Ditto–efekti (vaatii vahvistusklikkauksen)
         self.ditto_active = [False, False, False]
+
+    def roll_penalty(self):
+        p = self.controller.penalty_deck.draw_penalty_card()
+        if p:
+            self.controller.log_message(f"{self.controller.players[self.controller.current_player_index]} rolled penalty card: {p}")
+            self.penalty_label.config(text=p)
+        else:
+            self.penalty_label.config(text="")
 
     def update_for_new_turn(self):
         self.redraw_used = False
