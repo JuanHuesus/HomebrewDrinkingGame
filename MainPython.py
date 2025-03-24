@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 import collections
+import tkinter.font as tkFont
 
 from cards.normal_deck import NormalDeck
 from cards.penalty_deck import PenaltyDeck
@@ -12,23 +13,37 @@ class GameApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Homebrew Drinking Game")
-        self.geometry("1920x1080")
+        self.geometry("1280x720")
         
-        try:
-            self.bg_image = Image.open("Images/background.jpg")
-            self.bg_image = self.bg_image.resize((1920, 1080), Image.LANCZOS)
-            self.bg_image = ImageTk.PhotoImage(self.bg_image)
-            self.canvas = tk.Canvas(self, width=1920, height=1080)
-            self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
-            self.canvas.create_image(0, 0, image=self.bg_image, anchor="nw")
-        except Exception as e:
-            print("Background image not found:", e)
+        self.base_width = 1920
+        self.base_height = 1080
+        
+        self.label_font = tkFont.Font(family="Helvetica", size=20, weight="bold")
+        self.sub_label_font = tkFont.Font(family="Helvetica", size=18)
+        self.button_font = tkFont.Font(family="Helvetica", size=16)
+        self.entry_font = tkFont.Font(family="Helvetica", size=16)
+        self.tree_font = tkFont.Font(family="Helvetica", size=16)
+        self.text_font = tkFont.Font(family="Helvetica", size=16)
         
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
         self.style.configure("TFrame", background="#f0f0f0")
-        self.style.configure("TButton", font=("Helvetica", 12))
-        self.style.configure("TLabel", font=("Helvetica", 14), background="#f0f0f0")
+        self.style.configure("TButton", font=self.button_font)
+        self.style.configure("Accent.TButton", font=self.button_font, foreground="blue")
+        self.style.configure("TLabel", font=self.label_font, background="#f0f0f0")
+        self.style.configure("Treeview", font=self.tree_font)
+        self.style.configure("Treeview.Heading", font=self.tree_font)
+        
+        try:
+            self.original_bg_image = Image.open("Images/background.jpg")
+            self.bg_image = ImageTk.PhotoImage(
+                self.original_bg_image.resize((self.base_width, self.base_height), Image.LANCZOS)
+            )
+            self.canvas = tk.Canvas(self)
+            self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
+            self.canvas_bg = self.canvas.create_image(0, 0, image=self.bg_image, anchor="nw")
+        except Exception as e:
+            print("Background image not found:", e)
         
         self.players = []  
         self.current_player_index = 0
@@ -52,7 +67,9 @@ class GameApp(tk.Tk):
         
         self.player_list_frame = ttk.Frame(self, padding=10, relief="ridge")
         self.player_list_frame.place(relx=0.75, rely=0.1, relwidth=0.25, relheight=0.4)
-        self.player_list_label = ttk.Label(self.player_list_frame, text="Players & Inventory", font=("Helvetica", 16))
+        self.player_list_label = ttk.Label(
+            self.player_list_frame, text="Players & Inventory", font=self.label_font
+        )
         self.player_list_label.pack(pady=5)
         
         self.player_tree = ttk.Treeview(self.player_list_frame)
@@ -67,13 +84,46 @@ class GameApp(tk.Tk):
         
         self.message_box_frame = ttk.Frame(self, padding=10, relief="ridge")
         self.message_box_frame.place(relx=0.75, rely=0.55, relwidth=0.25, relheight=0.3)
-        self.message_box_label = ttk.Label(self.message_box_frame, text="Card History", font=("Helvetica", 16))
-        self.message_box_label.pack(pady=10)
-        self.message_box = tk.Text(self, height=10, state='disabled', wrap='word', font=("Helvetica", 12))
-        self.message_box.place(relx=0.75, rely=0.60, relwidth=0.25, relheight=0.3)
+        
+        self.message_box_label = ttk.Label(
+            self.message_box_frame, text="Card History", font=self.label_font
+        )
+        self.message_box_label.pack(side="top", anchor="center", pady=10)
+        
+        self.message_box = tk.Text(self.message_box_frame, state='disabled',
+                                   wrap='word', font=self.text_font)
+        self.message_box.pack(expand=True, fill="both")
         
         self.exit_button = ttk.Button(self, text="Exit", command=self.exit_game)
         self.exit_button.place(relx=0.95, rely=0.95, anchor="se")
+        
+        self.bind("<Configure>", self.on_resize)
+    
+    def on_resize(self, event):
+        if hasattr(self, "original_bg_image"):
+            width = self.winfo_width()
+            height = self.winfo_height()
+            resized_image = self.original_bg_image.resize((width, height), Image.LANCZOS)
+            self.bg_image = ImageTk.PhotoImage(resized_image)
+            self.canvas.itemconfig(self.canvas_bg, image=self.bg_image)
+        
+        current_width = self.winfo_width()
+        current_height = self.winfo_height()
+        scale_factor = min(current_width / self.base_width, current_height / self.base_height)
+        
+        new_label_size = max(10, int(20 * scale_factor))
+        new_sub_label_size = max(10, int(18 * scale_factor))
+        new_button_size = max(8, int(16 * scale_factor))
+        new_entry_size = max(8, int(16 * scale_factor))
+        new_tree_size = max(8, int(16 * scale_factor))
+        new_text_size = max(8, int(16 * scale_factor))
+        
+        self.label_font.config(size=new_label_size)
+        self.sub_label_font.config(size=new_sub_label_size)
+        self.button_font.config(size=new_button_size)
+        self.entry_font.config(size=new_entry_size)
+        self.tree_font.config(size=new_tree_size)
+        self.text_font.config(size=new_text_size)
     
     def show_frame(self, page_name):
         frame = self.frames[page_name]
@@ -102,7 +152,6 @@ class GameApp(tk.Tk):
                 inv_str = inv_str[:40] + "..."
             display = f"{player}{inv_str and ' (' + inv_str + ')'}"
             self.player_tree.insert("", "end", iid=player, text=player, values=(inv_str,))
-
     
     def on_tree_item_double_click(self, event):
         item_id = self.player_tree.focus()
@@ -115,7 +164,7 @@ class GameApp(tk.Tk):
             messagebox.showinfo("No items", "You have no items to use.")
             return
         self.open_use_item_dialog(current_player, inv)
-
+    
     def open_use_item_dialog(self, player, inv_counter):
         dialog = tk.Toplevel(self)
         dialog.transient(self) 
@@ -123,13 +172,12 @@ class GameApp(tk.Tk):
         y = self.winfo_rooty() + 50
         dialog.geometry("+%d+%d" % (x, y))
         dialog.title("Use an Item")
-        tk.Label(dialog, text="Select an item to use:", font=("Helvetica", 12)).pack(pady=10)
+        tk.Label(dialog, text="Select an item to use:", font=self.button_font).pack(pady=10)
         for item, count in inv_counter.items():
             btn = ttk.Button(dialog, text=f"{item} x{count}",
                              command=lambda it=item, dlg=dialog: self.use_item_and_close(it, dlg))
             btn.pack(pady=5, padx=10, fill="x")
         ttk.Button(dialog, text="Cancel", command=dialog.destroy).pack(pady=10)
-
     
     def use_item_and_close(self, item, dialog):
         self.use_item(item)

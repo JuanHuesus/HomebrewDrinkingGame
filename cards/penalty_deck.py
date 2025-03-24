@@ -17,7 +17,6 @@ class PenaltyDeck:
             self.cards.remove(card_name)
     
     def draw_penalty_card(self):
-        """Arpoo yhden rangaistuskortin, jos niitä on saatavilla."""
         if self.cards:
             return random.choice(self.cards)
         return None
