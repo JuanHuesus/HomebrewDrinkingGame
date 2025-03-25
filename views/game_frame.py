@@ -46,6 +46,27 @@ class CardWidget(tk.Canvas):
         if self.command:
             self.command()
 
+    def flip_animation(self, final_text, steps=3, delay=100):
+        """
+        Simuloi kortin kääntymistä näyttämällä ensin pisteitä ennen varsinaisen tekstin paljastamista.
+        """
+        def animate(i):
+            if i < steps:
+                self.update_text("." * (i + 1))
+                self.after(delay, lambda: animate(i + 1))
+            else:
+                self.update_text(final_text)
+        animate(0)
+
+    def flash_card(self, flash_color="yellow", flash_duration=200):
+        """
+        Väliaikaisesti vaihtaa kortin reunaväriä visuaalista palautetta varten.
+        """
+        original_color = self.border_color
+        self.update_border_color(flash_color)
+        self.after(flash_duration, lambda: self.update_border_color(original_color))
+
+
 class GameFrame(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -72,14 +93,16 @@ class GameFrame(ttk.Frame):
             self.card_frame.columnconfigure(i, weight=1)
         self.card_frame.rowconfigure(0, weight=1)
 
-        # Nappi redrawille (penalty)
-        self.redraw_button = ttk.Button(self.center_frame, text="Redraw (Penalty)", command=self.redraw_penalty,
-                                        style="Accent.TButton")
-        self.redraw_button.pack(pady=10)
+        # Erotellaan penalty-napit omaan kehykseensä
+        self.penalty_frame = ttk.Frame(self.center_frame)
+        self.penalty_frame.pack(pady=10, fill="x")
 
-        # Uusi nappi penalty deckin rollaukselle
-        self.roll_button = ttk.Button(self.center_frame, text="Roll Penalty Deck", command=self.roll_penalty)
-        self.roll_button.pack(pady=10)
+        self.roll_button = ttk.Button(self.penalty_frame, text="Roll Penalty Deck", command=self.roll_penalty)
+        self.roll_button.grid(row=0, column=0, padx=(20,10))
+
+        self.redraw_button = ttk.Button(self.penalty_frame, text="Redraw (Penalty)", command=self.redraw_penalty,
+                                        style="Accent.TButton")
+        self.redraw_button.grid(row=0, column=1, padx=(10,20))
 
         # Tehdään penalty-teksti isommaksi ja selkeämmäksi
         self.penalty_label = ttk.Label(self.center_frame, text="", font=self.controller.label_font,
@@ -102,6 +125,9 @@ class GameFrame(ttk.Frame):
         if p:
             self.controller.log_message(f"{self.controller.players[self.controller.current_player_index]} rolled penalty card: {p}")
             self.penalty_label.config(text=p)
+            # Flashataan penalty_labelä lyhyesti
+            self.penalty_label.after(100, lambda: self.penalty_label.config(background="yellow"))
+            self.penalty_label.after(300, lambda: self.penalty_label.config(background="#FFFACD"))
         else:
             self.penalty_label.config(text="")
 
@@ -139,10 +165,10 @@ class GameFrame(ttk.Frame):
         for widget in self.card_widgets:
             widget.unbind("<Button-1>")
 
-        # Jos kortti on piilotettu ("???"), paljasta se heti ja odota seuraavaa klikkausta
+        # Jos kortti on piilotettu ("???"), paljasta se animaation avulla
         if not self.revealed[i]:
             self.revealed[i] = True
-            self.card_widgets[i].update_text(self.current_cards[i])
+            self.card_widgets[i].flip_animation(self.current_cards[i])
             self.card_widgets[i].bind("<Button-1>", lambda e, idx=i: self.select_card(idx))
             return
 
@@ -156,7 +182,7 @@ class GameFrame(ttk.Frame):
             self.controller.add_item_to_player(current_player, revealed_value)
             self.card_widgets[i].unbind("<Button-1>")
             self.card_widgets[i].update_text("")
-            # Peli etenee heti
+            self.card_widgets[i].flash_card()
             self.controller.next_player()
             return
 
@@ -165,13 +191,13 @@ class GameFrame(ttk.Frame):
             if self.ditto_active[i]:
                 self.controller.log_message(f"{current_player} confirmed Ditto card.")
                 self.card_widgets[i].unbind("<Button-1>")
-                # Palautetaan alkuperäinen ulkoasu vahvistuksen jälkeen
+                # Palautetaan alkuperäinen ulkoasu: täyttöväri valkoinen ja reunaväri musta
                 self.card_widgets[i].update_fill_color("white")
+                self.card_widgets[i].update_border_color("black")
                 self.controller.next_player()
                 return
             else:
                 self.ditto_active[i] = True
-                # Päivitetään kortin ulkoasu, jotta Ditto näkyy selkeämmin
                 self.card_widgets[i].update_text("Ditto")
                 self.card_widgets[i].update_border_color("purple")
                 self.card_widgets[i].update_fill_color("#E6E6FA")  # Laventelinsävyinen tausta
@@ -181,7 +207,9 @@ class GameFrame(ttk.Frame):
 
         # Normaali kortin valinta ilman erikoisefektejä
         self.controller.log_message(f"{current_player} selected {revealed_value}")
+        self.card_widgets[i].flash_card()
         self.controller.next_player()
+
 
     def redraw_penalty(self):
         if self.redraw_used:
