@@ -26,7 +26,7 @@ class GameApp(tk.Tk):
         
         self.style = ttk.Style(self)
         self.style.theme_use("clam")
-        self.style.configure("TFrame", background="#f0f0f0")
+        self.style.configure("TFrame", background="#00FFFFF")
         self.style.configure("TButton", font=("Helvetica", 12))
         self.style.configure("TLabel", font=("Helvetica", 14), background="#f0f0f0")
         

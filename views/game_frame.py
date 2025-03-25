@@ -47,7 +47,7 @@ class GameFrame(ttk.Frame):
         self.controller = controller
 
         # Määritellään item-korttien nimet
-        self.ITEM_CARDS = {"Shield", "Mirror"}
+        self.ITEM_CARDS = {"Mirror"}
 
         self.center_frame = ttk.Frame(self)
         self.center_frame.pack(expand=True, fill="both")
@@ -85,6 +85,10 @@ class GameFrame(ttk.Frame):
         # Seurataan, onko korttiin aktivoitu Ditto–efekti (vaatii vahvistusklikkauksen)
         self.ditto_active = [False, False, False]
 
+        # Add the penalty button
+        self.penalty_button = ttk.Button(self, text="Roll Penalty", command=self.roll_penalty)
+        self.penalty_button.pack(side="left", anchor="sw", padx=10, pady=10)
+
     def update_for_new_turn(self):
         self.redraw_used = False
         self.penalty_label.config(text="")
@@ -94,16 +98,18 @@ class GameFrame(ttk.Frame):
 
         # Vedä 3 uutta korttia NormalDeckistä
         self.current_cards = self.controller.normal_deck.draw_cards(3)
-        # Satunnaisesti muutetaan joihinkin kortteihin item–kortteja (30 % todennäköisyys per kortti)
-        for i in range(len(self.current_cards)):
-            if random.random() < 0.3:
+        # Satunnaisesti muutetaan joihinkin kortteihin item–kortteja (2 % todennäköisyys per kortti)
+        for i in range(len(self.current_cards)): 
+            if random.random() < 0.02:
                 self.current_cards[i] = random.choice(list(self.ITEM_CARDS))
 
-        # Valitaan satunnaisesti yksi kortti, joka asetetaan piilotetuksi ("???")
-        self.hidden_index = random.randint(0, 2)
+        # Valitaan "Special Card" ja "Crowd Challenge" piilotettavaksi, jos ne on vedetty
+        self.hidden_index = None
         self.revealed = [True, True, True]
-        self.revealed[self.hidden_index] = False
-        self.ditto_active = [False, False, False]
+        for i, card in enumerate(self.current_cards):
+            if card == "???":
+                self.hidden_index = i
+                self.revealed[i] = False
 
         for i, (widget, card_value) in enumerate(zip(self.card_widgets, self.current_cards)):
             widget.update_border_color("black")
@@ -121,7 +127,9 @@ class GameFrame(ttk.Frame):
         # Jos kortti on piilotettu ("???"), paljasta se heti ja odota seuraavaa klikkausta
         if not self.revealed[i]:
             self.revealed[i] = True
-            self.card_widgets[i].update_text(self.current_cards[i])
+            transformed_card = self.controller.normal_deck.transform_card(self.current_cards[i])
+            self.current_cards[i] = transformed_card  # Update the card in the current cards list
+            self.card_widgets[i].update_text(transformed_card)
             self.card_widgets[i].bind("<Button-1>", lambda e, idx=i: self.select_card(idx))
             return
 
@@ -174,10 +182,12 @@ class GameFrame(ttk.Frame):
         for i in range(len(self.current_cards)):
             if random.random() < 0.3:
                 self.current_cards[i] = random.choice(list(self.ITEM_CARDS))
-        self.hidden_index = random.randint(0, 2)
+        self.hidden_index = None
         self.revealed = [True, True, True]
-        self.revealed[self.hidden_index] = False
-        self.ditto_active = [False, False, False]
+        for i, card in enumerate(self.current_cards):
+            if card == "???":
+                self.hidden_index = i
+                self.revealed[i] = False
 
         for i, (widget, card_value) in enumerate(zip(self.card_widgets, self.current_cards)):
             widget.update_border_color("black")
@@ -190,3 +200,11 @@ class GameFrame(ttk.Frame):
 
     def handle_crowd_challenge(self):
         self.controller.log_message("Crowd Challenge triggered! All players must do something special!")
+
+    def roll_penalty(self):
+        penalty = self.controller.penalty_deck.draw_penalty_card()
+        if penalty:
+            self.controller.log_message(f"Penalty: {penalty}")
+            self.penalty_label.config(text=penalty)
+        else:
+            self.penalty_label.config(text="No penalty card drawn.")

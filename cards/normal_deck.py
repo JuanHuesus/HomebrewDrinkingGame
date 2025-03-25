@@ -4,13 +4,20 @@ class NormalDeck:
     def __init__(self):
         self.cards = [
             "Drink 1",
+            "Drink 4",
+            "Drink 5",
+            "Drink 6",
             "Drink 2",
             "Give 1",
             "Give 3",
             "Crowd Challenge",
+            "Crowd Challenge",
+            "Crowd Challenge",
+            "Crowd Challenge",
             "Drink 2, Give 1",
+            "Drink 3, Give 2",
+            "Drink 1, Give 3",
             "Drink 1, Give 1",
-            "Skip",
             "Drink 3",
             "Give 2",
             "Special Card"
